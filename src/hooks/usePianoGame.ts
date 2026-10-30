@@ -17,7 +17,7 @@ import {
   type Records,
 } from "@/lib/game";
 import {
-  generatePracticeNotes,
+  generatePracticeBatch,
   midiName,
   noteName,
   parseSequence,
@@ -62,6 +62,7 @@ export function usePianoGame() {
   const [listenIndex, setListenIndex] = useState(-1);
   const [feedback, setFeedback] = useState<KeyFeedback | null>(null);
   const [wrongMidi, setWrongMidi] = useState<number | null>(null);
+  const [practiceScale, setPracticeScale] = useState<string | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const feedbackId = useRef(0);
   const hydrated = useRef(false);
@@ -73,12 +74,12 @@ export function usePianoGame() {
     setListenIndex(-1);
   }, []);
 
-  const notesFor = useCallback((nextPreferences: Preferences) => {
+  const contentFor = useCallback((nextPreferences: Preferences) => {
     if (nextPreferences.mode === "practice") {
-      return generatePracticeNotes(nextPreferences.clef, nextPreferences.difficulty, 16);
+      return generatePracticeBatch(nextPreferences.clef, nextPreferences.difficulty, 16);
     }
     const song = SONG_BY_ID[nextPreferences.songId] ?? SONG_BY_ID.escala;
-    return parseSequence(song.notes);
+    return { notes: parseSequence(song.notes), scaleName: null };
   }, []);
 
   const resetSession = useCallback((
@@ -86,7 +87,9 @@ export function usePianoGame() {
     preserveStats = false,
   ) => {
     stopListening();
-    setNotes(notesFor(nextPreferences));
+    const content = contentFor(nextPreferences);
+    setNotes(content.notes);
+    setPracticeScale(content.scaleName);
     setIndex(0);
     setWrongAttempts(0);
     setUsedHint(false);
@@ -107,7 +110,7 @@ export function usePianoGame() {
         : "Toque no piano a nota destacada em azul.",
       tone: "neutral",
     });
-  }, [notesFor, preferences, stopListening]);
+  }, [contentFor, preferences, stopListening]);
 
   useEffect(() => {
     const saved = loadPreferences();
@@ -116,7 +119,9 @@ export function usePianoGame() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPreferences(saved);
     setRecords(loadRecords());
-    setNotes(notesFor(saved));
+    const content = contentFor(saved);
+    setNotes(content.notes);
+    setPracticeScale(content.scaleName);
     setMessage({
       text: saved.mode === "practice"
         ? "Toque a nota destacada. Uma nova rodada chega após 16 acertos."
@@ -126,7 +131,7 @@ export function usePianoGame() {
     setTimeout(() => {
       hydrated.current = true;
     }, 0);
-  }, [notesFor]);
+  }, [contentFor]);
 
   useEffect(() => () => stopListening(), [stopListening]);
 
@@ -160,13 +165,24 @@ export function usePianoGame() {
   }, [preferences]);
 
   const startNextPracticeBatch = useCallback(() => {
-    setNotes(generatePracticeNotes(preferences.clef, preferences.difficulty, 16));
+    const content = generatePracticeBatch(
+      preferences.clef,
+      preferences.difficulty,
+      16,
+    );
+    setNotes(content.notes);
+    setPracticeScale(content.scaleName);
     setIndex(0);
     setWrongAttempts(0);
     setUsedHint(false);
     setHintMidi(null);
     setComplete(false);
-    setMessage({ text: "Novas notas. Continue!", tone: "neutral" });
+    setMessage({
+      text: content.scaleName
+        ? `Novas notas em ${content.scaleName}. Continue!`
+        : "Novas notas. Continue!",
+      tone: "neutral",
+    });
   }, [preferences.clef, preferences.difficulty]);
 
   const press = useCallback((midi: number) => {
@@ -288,11 +304,17 @@ export function usePianoGame() {
 
   const retry = useCallback(() => resetSession(preferences), [preferences, resetSession]);
 
+  const difficultyLabel = {
+    easy: "Fácil",
+    medium: "Médio",
+    hard: "Difícil",
+    "easy-scales": "Fácil com escalas",
+    "medium-scales": "Médio com escalas",
+    "hard-scales": "Difícil com escalas",
+  }[preferences.difficulty];
   const title = preferences.mode === "songs"
     ? (SONG_BY_ID[preferences.songId] ?? SONG_BY_ID.escala).title
-    : `Notas avulsas · ${
-      { easy: "Fácil", medium: "Médio", hard: "Difícil" }[preferences.difficulty]
-    }`;
+    : `Notas avulsas · ${difficultyLabel}${practiceScale ? ` · ${practiceScale}` : ""}`;
   const clef = preferences.mode === "songs"
     ? (SONG_BY_ID[preferences.songId] ?? SONG_BY_ID.escala).clef
     : preferences.clef;

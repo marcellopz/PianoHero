@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { KeyFeedback } from "@/hooks/usePianoGame";
 import {
+  midiKeyName,
   noteName,
   PIANO_RANGE,
   spellMidi,
@@ -65,7 +66,9 @@ export function Piano({
               left: `${((whiteBefore + 1) / whiteKeys.length) * 100 - (0.31 / whiteKeys.length) * 100}%`,
               width: `${(0.62 / whiteKeys.length) * 100}%`,
             } : undefined;
-            const name = noteName(spelling.letterIndex, spelling.accidental, notation);
+            const name = black
+              ? midiKeyName(midi, notation)
+              : noteName(spelling.letterIndex, spelling.accidental, notation);
             return (
               <button
                 key={midi}

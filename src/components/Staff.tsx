@@ -190,7 +190,11 @@ export function Staff({
               className={`staff-note${done ? " is-done" : ""}${current ? " is-current" : ""}`}
             >
               {ledgerLines(note)}
-              {note.accidental === 1 && <text className="accidental" x={note.x - 16} y={note.y + 5}>♯</text>}
+              {note.accidental !== 0 && (
+                <text className="accidental" x={note.x - 16} y={note.y + 5}>
+                  {note.accidental === 1 ? "♯" : "♭"}
+                </text>
+              )}
               {note.duration !== "w" && (
                 <line
                   className="note-stem"

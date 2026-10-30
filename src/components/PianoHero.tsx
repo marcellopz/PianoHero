@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { SONGS, SONG_BY_ID } from "@/data/songs";
 import { usePianoGame } from "@/hooks/usePianoGame";
+import type { Difficulty } from "@/lib/music";
 import { Piano } from "./Piano";
 import { Staff } from "./Staff";
 
@@ -16,6 +17,9 @@ const DIFFICULTY_LABELS = {
   easy: "Fácil · saltos de 1–2",
   medium: "Médio · saltos de 3–5",
   hard: "Difícil · saltos de 6–9",
+  "easy-scales": "Fácil com escalas · até 1 acidente",
+  "medium-scales": "Médio com escalas · 2–3 acidentes",
+  "hard-scales": "Difícil com escalas · 4–6 acidentes",
 } as const;
 
 export function PianoHero() {
@@ -115,7 +119,7 @@ export function PianoHero() {
                 <select
                   value={game.preferences.difficulty}
                   onChange={(event) => game.changePreferences({
-                    difficulty: event.target.value as "easy" | "medium" | "hard",
+                    difficulty: event.target.value as Difficulty,
                   })}
                 >
                   {Object.entries(DIFFICULTY_LABELS).map(([value, label]) => (
@@ -266,6 +270,11 @@ export function PianoHero() {
             <p>
               Acertos rápidos e sequências valem mais. Erros e dicas reduzem
               os pontos da nota, mas sua pontuação nunca diminui.
+            </p>
+            <h3>Sustenidos e bemóis</h3>
+            <p>
+              O ♯ sobe a nota meio tom e o ♭ desce meio tom. No piano, eles
+              normalmente indicam as teclas pretas entre duas notas naturais.
             </p>
           </article>
         </div>

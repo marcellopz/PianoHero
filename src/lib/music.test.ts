@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { SONGS } from "@/data/songs";
 import {
   DIFFICULTY_JUMPS,
+  generatePracticeBatch,
   generatePracticeNotes,
   parseNote,
   parseSequence,
-  type Difficulty,
+  type BaseDifficulty,
 } from "./music";
 import { accuracyPercent, completionBonus, scoreNote } from "./game";
 
@@ -21,10 +22,11 @@ describe("teoria musical", () => {
   it("converte altura, oitava e duração para MIDI e tempos", () => {
     expect(parseNote("C4")).toMatchObject({ midi: 60, beats: 1, diatonic: 28 });
     expect(parseNote("F#4:h")).toMatchObject({ midi: 66, beats: 2, accidental: 1 });
+    expect(parseNote("Bb4")).toMatchObject({ midi: 70, beats: 1, accidental: -1 });
     expect(parseSequence("C4 D4:h E4:w").map((note) => note.start)).toEqual([0, 1, 3]);
   });
 
-  it.each(["easy", "medium", "hard"] as Difficulty[])(
+  it.each(["easy", "medium", "hard"] as BaseDifficulty[])(
     "respeita os saltos definidos no nível %s",
     (difficulty) => {
       const notes = generatePracticeNotes("treble", difficulty, 50, seededRandom());
@@ -34,6 +36,8 @@ describe("teoria musical", () => {
         expect(jump).toBeGreaterThanOrEqual(minimum);
         expect(jump).toBeLessThanOrEqual(maximum);
       });
+      expect(notes.some((note) => note.accidental === 1)).toBe(true);
+      expect(notes.some((note) => note.accidental === -1)).toBe(true);
     },
   );
 
@@ -41,6 +45,15 @@ describe("teoria musical", () => {
     expect(SONGS).toHaveLength(10);
     SONGS.forEach((song) => expect(() => parseSequence(song.notes)).not.toThrow());
   });
+
+  it.each(["easy-scales", "medium-scales", "hard-scales"] as const)(
+    "gera uma tonalidade identificada no nível %s",
+    (difficulty) => {
+      const batch = generatePracticeBatch("treble", difficulty, 16, seededRandom());
+      expect(batch.notes).toHaveLength(16);
+      expect(batch.scaleName).not.toBeNull();
+    },
+  );
 });
 
 describe("pontuação", () => {
