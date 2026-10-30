@@ -22,6 +22,7 @@ import {
   noteName,
   parseSequence,
   pitchDirection,
+  type KeySignature,
   type Note,
 } from "@/lib/music";
 
@@ -63,6 +64,7 @@ export function usePianoGame() {
   const [feedback, setFeedback] = useState<KeyFeedback | null>(null);
   const [wrongMidi, setWrongMidi] = useState<number | null>(null);
   const [practiceScale, setPracticeScale] = useState<string | null>(null);
+  const [keySignature, setKeySignature] = useState<KeySignature | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const feedbackId = useRef(0);
   const hydrated = useRef(false);
@@ -79,7 +81,7 @@ export function usePianoGame() {
       return generatePracticeBatch(nextPreferences.clef, nextPreferences.difficulty, 16);
     }
     const song = SONG_BY_ID[nextPreferences.songId] ?? SONG_BY_ID.escala;
-    return { notes: parseSequence(song.notes), scaleName: null };
+    return { notes: parseSequence(song.notes), scaleName: null, keySignature: null };
   }, []);
 
   const resetSession = useCallback((
@@ -90,6 +92,7 @@ export function usePianoGame() {
     const content = contentFor(nextPreferences);
     setNotes(content.notes);
     setPracticeScale(content.scaleName);
+    setKeySignature(content.keySignature);
     setIndex(0);
     setWrongAttempts(0);
     setUsedHint(false);
@@ -122,6 +125,7 @@ export function usePianoGame() {
     const content = contentFor(saved);
     setNotes(content.notes);
     setPracticeScale(content.scaleName);
+    setKeySignature(content.keySignature);
     setMessage({
       text: saved.mode === "practice"
         ? "Toque a nota destacada. Uma nova rodada chega após 16 acertos."
@@ -172,6 +176,7 @@ export function usePianoGame() {
     );
     setNotes(content.notes);
     setPracticeScale(content.scaleName);
+    setKeySignature(content.keySignature);
     setIndex(0);
     setWrongAttempts(0);
     setUsedHint(false);
@@ -233,7 +238,7 @@ export function usePianoGame() {
       } else {
         setIndex((currentIndex) => currentIndex + 1);
         setMessage({
-          text: `Isso! ${noteName(current.letterIndex, current.accidental, preferences.notation)} valeu ${earned} pontos.`,
+          text: `Isso! ${noteName(current.letterIndex, current.accidental, preferences.notation, current.naturalSign)} valeu ${earned} pontos.`,
           tone: "good",
         });
       }
@@ -267,7 +272,7 @@ export function usePianoGame() {
     setUsedHint(true);
     setHintMidi(current.midi);
     setMessage({
-      text: `A tecla de ${noteName(current.letterIndex, current.accidental, preferences.notation)} está piscando.`,
+      text: `A tecla de ${noteName(current.letterIndex, current.accidental, preferences.notation, current.naturalSign)} está piscando.`,
       tone: "neutral",
     });
   }, [complete, index, listening, notes, preferences.notation]);
@@ -343,6 +348,7 @@ export function usePianoGame() {
     feedback,
     wrongMidi,
     hintMidi,
+    keySignature,
     title,
     clef,
     currentRecord,

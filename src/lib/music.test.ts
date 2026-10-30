@@ -4,6 +4,7 @@ import {
   DIFFICULTY_JUMPS,
   generatePracticeBatch,
   generatePracticeNotes,
+  noteName,
   parseNote,
   parseSequence,
   type BaseDifficulty,
@@ -23,6 +24,7 @@ describe("teoria musical", () => {
     expect(parseNote("C4")).toMatchObject({ midi: 60, beats: 1, diatonic: 28 });
     expect(parseNote("F#4:h")).toMatchObject({ midi: 66, beats: 2, accidental: 1 });
     expect(parseNote("Bb4")).toMatchObject({ midi: 70, beats: 1, accidental: -1 });
+    expect(noteName(3, 0, "pt", true)).toBe("Fá♮");
     expect(parseSequence("C4 D4:h E4:w").map((note) => note.start)).toEqual([0, 1, 3]);
   });
 
@@ -52,6 +54,14 @@ describe("teoria musical", () => {
       const batch = generatePracticeBatch("treble", difficulty, 16, seededRandom());
       expect(batch.notes).toHaveLength(16);
       expect(batch.scaleName).not.toBeNull();
+    },
+  );
+
+  it.each(["medium-scales", "hard-scales"] as const)(
+    "inclui bequadro para cancelar a armadura em %s",
+    (difficulty) => {
+      const batch = generatePracticeBatch("treble", difficulty, 16, seededRandom());
+      expect(batch.notes.some((note) => note.naturalSign)).toBe(true);
     },
   );
 });

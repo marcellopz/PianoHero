@@ -17,6 +17,7 @@ export interface Note {
   duration: Duration;
   beats: number;
   start: number;
+  naturalSign?: boolean;
 }
 
 export interface Song {
@@ -30,6 +31,12 @@ export interface Song {
 export interface PracticeBatch {
   notes: Note[];
   scaleName: string | null;
+  keySignature: KeySignature | null;
+}
+
+export interface KeySignature {
+  kind: "sharp" | "flat";
+  count: number;
 }
 
 interface ScaleDefinition {
@@ -118,11 +125,16 @@ export function noteFromDiatonic(
   diatonic: number,
   start = 0,
   accidental: -1 | 0 | 1 = 0,
+  naturalSign = false,
 ): Note {
   const letterIndex = ((diatonic % 7) + 7) % 7;
   const octave = Math.floor(diatonic / 7);
   const symbol = accidental === 1 ? "#" : accidental === -1 ? "b" : "";
-  return { ...parseNote(`${LETTERS[letterIndex]}${symbol}${octave}`), start };
+  return {
+    ...parseNote(`${LETTERS[letterIndex]}${symbol}${octave}`),
+    start,
+    naturalSign,
+  };
 }
 
 export function spellMidi(midi: number) {
@@ -140,8 +152,10 @@ export function noteName(
   letterIndex: number,
   accidental: number,
   notation: Notation,
+  naturalSign = false,
 ) {
   const base = notation === "pt" ? PORTUGUESE[letterIndex] : LETTERS[letterIndex];
+  if (naturalSign) return `${base}♮`;
   const symbol = accidental > 0 ? "♯" : accidental < 0 ? "♭" : "";
   return `${base}${symbol}`;
 }
@@ -201,12 +215,48 @@ export function generatePracticeBatch(
   const accidentals: Array<-1 | 0 | 1> = scale
     ? degrees.map((degree) => scale.accidentals[((degree % 7) + 7) % 7] ?? 0)
     : randomAccidentals(degrees, random);
+  const naturalSigns = scale
+    ? addNaturalSigns(degrees, accidentals, random)
+    : degrees.map(() => false);
 
   return {
     notes: degrees.map((degree, index) =>
-      noteFromDiatonic(degree, index, accidentals[index])),
+      noteFromDiatonic(degree, index, accidentals[index], naturalSigns[index])),
     scaleName: scale?.name ?? null,
+    keySignature: scale ? {
+      kind: Object.values(scale.accidentals)[0] === -1 ? "flat" : "sharp",
+      count: Object.keys(scale.accidentals).length,
+    } : null,
   };
+}
+
+function addNaturalSigns(
+  degrees: number[],
+  accidentals: Array<-1 | 0 | 1>,
+  random: () => number,
+) {
+  const naturalSigns = degrees.map(() => false);
+  const candidates = degrees
+    .map((degree, index) => ({ degree, index }))
+    .filter(({ degree, index }) => {
+      if (accidentals[index] === 0) return false;
+      const measureEnd = Math.min(degrees.length, Math.floor(index / 4) * 4 + 4);
+      return !degrees.slice(index + 1, measureEnd).some((next) =>
+        ((next % 7) + 7) % 7 === ((degree % 7) + 7) % 7);
+    });
+
+  candidates.forEach(({ index }) => {
+    if (random() < 0.2) {
+      accidentals[index] = 0;
+      naturalSigns[index] = true;
+    }
+  });
+  if (candidates.length > 0 && !naturalSigns.some(Boolean)) {
+    const { index } = candidates[Math.floor(random() * candidates.length)];
+    accidentals[index] = 0;
+    naturalSigns[index] = true;
+  }
+  return naturalSigns;
 }
 
 export function pitchDirection(played: number, expected: number) {

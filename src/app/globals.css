@@ -350,6 +350,14 @@ h1 span {
   text-anchor: middle;
 }
 
+.key-signature {
+  fill: var(--ink);
+  font-family: "Segoe UI Symbol", "Noto Music", serif;
+  font-size: 17px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
 .note-highlight {
   fill: var(--accent-tint);
 }

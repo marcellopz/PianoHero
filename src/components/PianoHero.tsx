@@ -176,6 +176,7 @@ export function PianoHero() {
           ghostMidi={ghostMidi}
           ghostBad={game.wrongMidi !== null}
           minimumMeasures={game.preferences.mode === "practice" ? 4 : 1}
+          keySignature={game.keySignature}
         />
 
         <div className={`message is-${game.message.tone}`} aria-live="polite">
@@ -275,6 +276,7 @@ export function PianoHero() {
             <p>
               O ♯ sobe a nota meio tom e o ♭ desce meio tom. No piano, eles
               normalmente indicam as teclas pretas entre duas notas naturais.
+              O ♮ cancela temporariamente o acidente indicado na armadura.
             </p>
           </article>
         </div>

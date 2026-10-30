@@ -5,6 +5,7 @@ import {
   noteName,
   spellMidi,
   type Clef,
+  type KeySignature,
   type Note,
   type Notation,
 } from "@/lib/music";
@@ -22,7 +23,19 @@ interface StaffProps {
   ghostMidi: number | null;
   ghostBad: boolean;
   minimumMeasures?: number;
+  keySignature?: KeySignature | null;
 }
+
+const KEY_SIGNATURE_DEGREES = {
+  treble: {
+    sharp: [38, 35, 39, 36, 33, 37, 34],
+    flat: [34, 37, 33, 36, 32, 35, 31],
+  },
+  bass: {
+    sharp: [24, 21, 25, 22, 26, 23, 27],
+    flat: [20, 23, 19, 22, 18, 21, 17],
+  },
+} as const;
 
 interface PositionedNote extends Note {
   row: number;
@@ -43,9 +56,11 @@ export function Staff({
   ghostMidi,
   ghostBad,
   minimumMeasures = 1,
+  keySignature = null,
 }: StaffProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(760);
+  const signatureCount = keySignature?.count ?? 0;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -59,7 +74,7 @@ export function Staff({
 
   const layout = useMemo(() => {
     const viewWidth = Math.max(300, width);
-    const staffStart = 70;
+    const staffStart = 70 + signatureCount * 9;
     const available = viewWidth - staffStart - 10;
     const measures = Math.max(
       minimumMeasures,
@@ -99,10 +114,13 @@ export function Staff({
       positioned,
       height: rows * systemHeight,
     };
-  }, [clef, minimumMeasures, notes, width]);
+  }, [clef, minimumMeasures, notes, signatureCount, width]);
 
   const focusIndex = listening ? listeningIndex : complete ? -1 : currentIndex;
   const focusNote = focusIndex >= 0 ? layout.positioned[focusIndex] : null;
+  const signatureDegrees = keySignature
+    ? KEY_SIGNATURE_DEGREES[clef][keySignature.kind].slice(0, keySignature.count)
+    : [];
 
   function ledgerLines(note: { x: number; row: number; diatonic: number }) {
     const lines: React.ReactNode[] = [];
@@ -143,10 +161,20 @@ export function Staff({
               <text className="clef-symbol" x={13} y={top + (clef === "treble" ? 40 : 31)}>
                 {clef === "treble" ? "𝄞" : "𝄢"}
               </text>
+              {signatureDegrees.map((degree, signatureIndex) => (
+                <text
+                  key={`${keySignature?.kind}-${signatureIndex}`}
+                  className="key-signature"
+                  x={48 + signatureIndex * 9}
+                  y={layout.yFor(degree, row) + 5}
+                >
+                  {keySignature?.kind === "sharp" ? "♯" : "♭"}
+                </text>
+              ))}
               {row === 0 && (
                 <g className="time-signature">
-                  <text x={55} y={top + 18}>4</text>
-                  <text x={55} y={top + 38}>4</text>
+                  <text x={55 + signatureCount * 9} y={top + 18}>4</text>
+                  <text x={55 + signatureCount * 9} y={top + 38}>4</text>
                 </g>
               )}
               {Array.from({ length: measureCount }, (__, column) => {
@@ -190,9 +218,9 @@ export function Staff({
               className={`staff-note${done ? " is-done" : ""}${current ? " is-current" : ""}`}
             >
               {ledgerLines(note)}
-              {note.accidental !== 0 && (
+              {(note.naturalSign || (note.accidental !== 0 && keySignature === null)) && (
                 <text className="accidental" x={note.x - 16} y={note.y + 5}>
-                  {note.accidental === 1 ? "♯" : "♭"}
+                  {note.naturalSign ? "♮" : note.accidental === 1 ? "♯" : "♭"}
                 </text>
               )}
               {note.duration !== "w" && (
@@ -214,7 +242,12 @@ export function Staff({
               />
               {(showNames || done) && (
                 <text className="staff-note-name" x={note.x} y={labelY}>
-                  {noteName(note.letterIndex, note.accidental, notation)}
+                  {noteName(
+                    note.letterIndex,
+                    note.accidental,
+                    notation,
+                    note.naturalSign,
+                  )}
                 </text>
               )}
             </g>
