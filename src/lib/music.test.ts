@@ -1,0 +1,59 @@
+import { describe, expect, it } from "vitest";
+import { SONGS } from "@/data/songs";
+import {
+  DIFFICULTY_JUMPS,
+  generatePracticeNotes,
+  parseNote,
+  parseSequence,
+  type Difficulty,
+} from "./music";
+import { accuracyPercent, completionBonus, scoreNote } from "./game";
+
+function seededRandom(seed = 12345) {
+  let state = seed;
+  return () => {
+    state = (state * 16807) % 2147483647;
+    return (state - 1) / 2147483646;
+  };
+}
+
+describe("teoria musical", () => {
+  it("converte altura, oitava e duração para MIDI e tempos", () => {
+    expect(parseNote("C4")).toMatchObject({ midi: 60, beats: 1, diatonic: 28 });
+    expect(parseNote("F#4:h")).toMatchObject({ midi: 66, beats: 2, accidental: 1 });
+    expect(parseSequence("C4 D4:h E4:w").map((note) => note.start)).toEqual([0, 1, 3]);
+  });
+
+  it.each(["easy", "medium", "hard"] as Difficulty[])(
+    "respeita os saltos definidos no nível %s",
+    (difficulty) => {
+      const notes = generatePracticeNotes("treble", difficulty, 50, seededRandom());
+      const [minimum, maximum] = DIFFICULTY_JUMPS[difficulty];
+      notes.slice(1).forEach((note, index) => {
+        const jump = Math.abs(note.diatonic - notes[index].diatonic);
+        expect(jump).toBeGreaterThanOrEqual(minimum);
+        expect(jump).toBeLessThanOrEqual(maximum);
+      });
+    },
+  );
+
+  it("oferece dez músicas monofônicas válidas", () => {
+    expect(SONGS).toHaveLength(10);
+    SONGS.forEach((song) => expect(() => parseSequence(song.notes)).not.toThrow());
+  });
+});
+
+describe("pontuação", () => {
+  it("premia sequências e aplica penalidades sem ficar negativa", () => {
+    expect(scoreNote(0, 0, false)).toBe(100);
+    expect(scoreNote(4, 0, false)).toBe(140);
+    expect(scoreNote(0, 1, true)).toBe(35);
+    expect(scoreNote(0, 99, true)).toBe(20);
+  });
+
+  it("calcula precisão e bônus de conclusão", () => {
+    expect(accuracyPercent(8, 2)).toBe(80);
+    expect(completionBonus(8, 2)).toBe(460);
+    expect(completionBonus(10, 0)).toBe(500);
+  });
+});
