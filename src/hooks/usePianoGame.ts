@@ -39,7 +39,27 @@ export interface KeyFeedback {
   id: number;
 }
 
+export interface NotePerformance {
+  key: string;
+  letterIndex: number;
+  accidental: number;
+  naturalSign: boolean;
+  octave: number;
+  hits: number;
+  misses: number;
+  hints: number;
+  totalResponseMs: number;
+}
+
 const initialNotes = parseSequence(SONG_BY_ID.escala.notes);
+
+function performanceKey(note: Note) {
+  return `${note.letterIndex}:${note.accidental}:${note.naturalSign ? 1 : 0}:${note.octave}`;
+}
+
+function nowMs() {
+  return typeof performance === "undefined" ? Date.now() : performance.now();
+}
 
 export function usePianoGame() {
   const [preferences, setPreferences] = useState<Preferences>(DEFAULT_PREFERENCES);
@@ -65,15 +85,18 @@ export function usePianoGame() {
   const [wrongMidi, setWrongMidi] = useState<number | null>(null);
   const [practiceScale, setPracticeScale] = useState<string | null>(null);
   const [keySignature, setKeySignature] = useState<KeySignature | null>(null);
+  const [notePerformance, setNotePerformance] = useState<Record<string, NotePerformance>>({});
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const feedbackId = useRef(0);
   const hydrated = useRef(false);
+  const noteStartedAt = useRef(nowMs());
 
   const stopListening = useCallback(() => {
     timers.current.forEach(clearTimeout);
     timers.current = [];
     setListening(false);
     setListenIndex(-1);
+    noteStartedAt.current = nowMs();
   }, []);
 
   const contentFor = useCallback((nextPreferences: Preferences) => {
@@ -100,12 +123,14 @@ export function usePianoGame() {
     setWrongMidi(null);
     setFeedback(null);
     setComplete(false);
+    noteStartedAt.current = nowMs();
     if (!preserveStats) {
       setHits(0);
       setMisses(0);
       setStreak(0);
       setBestStreak(0);
       setScore(0);
+      setNotePerformance({});
     }
     setMessage({
       text: nextPreferences.mode === "practice"
@@ -113,6 +138,7 @@ export function usePianoGame() {
         : "Toque no piano a nota destacada em azul.",
       tone: "neutral",
     });
+    noteStartedAt.current = nowMs();
   }, [contentFor, preferences, stopListening]);
 
   useEffect(() => {
@@ -182,6 +208,7 @@ export function usePianoGame() {
     setUsedHint(false);
     setHintMidi(null);
     setComplete(false);
+    noteStartedAt.current = nowMs();
     setMessage({
       text: content.scaleName
         ? `Novas notas em ${content.scaleName}. Continue!`
@@ -197,6 +224,29 @@ export function usePianoGame() {
     if (!current) return;
 
     if (midi === current.midi) {
+      const responseMs = Math.min(60_000, Math.max(0, nowMs() - noteStartedAt.current));
+      const statKey = performanceKey(current);
+      setNotePerformance((performance) => {
+        const previous = performance[statKey] ?? {
+          key: statKey,
+          letterIndex: current.letterIndex,
+          accidental: current.accidental,
+          naturalSign: Boolean(current.naturalSign),
+          octave: current.octave,
+          hits: 0,
+          misses: 0,
+          hints: 0,
+          totalResponseMs: 0,
+        };
+        return {
+          ...performance,
+          [statKey]: {
+            ...previous,
+            hits: previous.hits + 1,
+            totalResponseMs: previous.totalResponseMs + responseMs,
+          },
+        };
+      });
       const earned = scoreNote(streak, wrongAttempts, usedHint);
       const nextHits = hits + 1;
       const nextStreak = streak + 1;
@@ -237,12 +287,31 @@ export function usePianoGame() {
         }
       } else {
         setIndex((currentIndex) => currentIndex + 1);
+        noteStartedAt.current = nowMs();
         setMessage({
           text: `Isso! ${noteName(current.letterIndex, current.accidental, preferences.notation, current.naturalSign)} valeu ${earned} pontos.`,
           tone: "good",
         });
       }
     } else {
+      const statKey = performanceKey(current);
+      setNotePerformance((performance) => {
+        const previous = performance[statKey] ?? {
+          key: statKey,
+          letterIndex: current.letterIndex,
+          accidental: current.accidental,
+          naturalSign: Boolean(current.naturalSign),
+          octave: current.octave,
+          hits: 0,
+          misses: 0,
+          hints: 0,
+          totalResponseMs: 0,
+        };
+        return {
+          ...performance,
+          [statKey]: { ...previous, misses: previous.misses + 1 },
+        };
+      });
       setMisses((value) => value + 1);
       setStreak(0);
       setWrongAttempts((value) => value + 1);
@@ -269,13 +338,33 @@ export function usePianoGame() {
   const showHint = useCallback(() => {
     if (complete || listening || !notes[index]) return;
     const current = notes[index];
+    if (!usedHint) {
+      const statKey = performanceKey(current);
+      setNotePerformance((performance) => {
+        const previous = performance[statKey] ?? {
+          key: statKey,
+          letterIndex: current.letterIndex,
+          accidental: current.accidental,
+          naturalSign: Boolean(current.naturalSign),
+          octave: current.octave,
+          hits: 0,
+          misses: 0,
+          hints: 0,
+          totalResponseMs: 0,
+        };
+        return {
+          ...performance,
+          [statKey]: { ...previous, hints: previous.hints + 1 },
+        };
+      });
+    }
     setUsedHint(true);
     setHintMidi(current.midi);
     setMessage({
       text: `A tecla de ${noteName(current.letterIndex, current.accidental, preferences.notation, current.naturalSign)} está piscando.`,
       tone: "neutral",
     });
-  }, [complete, index, listening, notes, preferences.notation]);
+  }, [complete, index, listening, notes, preferences.notation, usedHint]);
 
   const listen = useCallback(() => {
     if (listening) {
@@ -349,6 +438,7 @@ export function usePianoGame() {
     wrongMidi,
     hintMidi,
     keySignature,
+    notePerformance: Object.values(notePerformance),
     title,
     clef,
     currentRecord,

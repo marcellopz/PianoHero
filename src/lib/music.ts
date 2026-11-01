@@ -59,7 +59,8 @@ const FLAT_SPELLING: ReadonlyArray<readonly [number, -1 | 0]> = [
 
 export const PIANO_RANGE = { low: 48, high: 84 };
 export const CLEF_RANGES: Record<Clef, readonly [number, number]> = {
-  treble: [28, 41],
+  // Fá3 a Si5: inclui notas abaixo do Dó central na clave de sol.
+  treble: [24, 41],
   bass: [21, 32],
 };
 export const DIFFICULTY_JUMPS: Record<BaseDifficulty, readonly [number, number]> = {

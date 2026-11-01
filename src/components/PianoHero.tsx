@@ -6,6 +6,7 @@ import { usePianoGame } from "@/hooks/usePianoGame";
 import type { Difficulty } from "@/lib/music";
 import { Piano } from "./Piano";
 import { Staff } from "./Staff";
+import { StatsModal } from "./StatsModal";
 
 const KEY_MAP: Record<string, number> = {
   a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7,
@@ -25,6 +26,7 @@ const DIFFICULTY_LABELS = {
 export function PianoHero() {
   const game = usePianoGame();
   const [hoverMidi, setHoverMidi] = useState<number | null>(null);
+  const [statsOpen, setStatsOpen] = useState(false);
   const { clef, press } = game;
 
   useEffect(() => {
@@ -160,6 +162,9 @@ export function PianoHero() {
             <span><b>{game.accuracy}%</b> precisão</span>
             <span><b>{game.streak}</b> sequência</span>
             <span><b>{game.bestStreak}</b> melhor</span>
+            <button className="details-button" type="button" onClick={() => setStatsOpen(true)}>
+              Ver detalhes
+            </button>
           </div>
         </div>
 
@@ -281,6 +286,19 @@ export function PianoHero() {
           </article>
         </div>
       </details>
+
+      <StatsModal
+        open={statsOpen}
+        onClose={() => setStatsOpen(false)}
+        score={game.score}
+        hits={game.hits}
+        misses={game.misses}
+        accuracy={game.accuracy}
+        streak={game.streak}
+        bestStreak={game.bestStreak}
+        notation={game.preferences.notation}
+        notes={game.notePerformance}
+      />
     </main>
   );
 }

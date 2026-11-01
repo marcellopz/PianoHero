@@ -43,6 +43,11 @@ describe("teoria musical", () => {
     },
   );
 
+  it("inclui a região abaixo do Dó central na clave de sol", () => {
+    const notes = generatePracticeNotes("treble", "easy", 16, () => 0);
+    expect(notes.some((note) => note.midi < 60)).toBe(true);
+  });
+
   it("oferece dez músicas monofônicas válidas", () => {
     expect(SONGS).toHaveLength(10);
     SONGS.forEach((song) => expect(() => parseSequence(song.notes)).not.toThrow());
