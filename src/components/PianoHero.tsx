@@ -290,14 +290,10 @@ export function PianoHero() {
       <StatsModal
         open={statsOpen}
         onClose={() => setStatsOpen(false)}
-        score={game.score}
-        hits={game.hits}
-        misses={game.misses}
-        accuracy={game.accuracy}
-        streak={game.streak}
-        bestStreak={game.bestStreak}
+        bestStreak={game.lifetimeBestStreak}
         notation={game.preferences.notation}
         notes={game.notePerformance}
+        onReset={game.resetDetailedStats}
       />
     </main>
   );

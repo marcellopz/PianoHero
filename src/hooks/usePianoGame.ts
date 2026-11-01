@@ -7,10 +7,13 @@ import {
   accuracyPercent,
   completionBonus,
   DEFAULT_PREFERENCES,
+  loadDetailedStats,
   loadPreferences,
   loadRecords,
   type Preferences,
+  type NotePerformance,
   savePreferences,
+  saveDetailedStats,
   saveRecords,
   scoreNote,
   sessionKey,
@@ -37,18 +40,6 @@ export interface KeyFeedback {
   midi: number;
   kind: "down" | "good" | "bad" | "play";
   id: number;
-}
-
-export interface NotePerformance {
-  key: string;
-  letterIndex: number;
-  accidental: number;
-  naturalSign: boolean;
-  octave: number;
-  hits: number;
-  misses: number;
-  hints: number;
-  totalResponseMs: number;
 }
 
 const initialNotes = parseSequence(SONG_BY_ID.escala.notes);
@@ -86,9 +77,11 @@ export function usePianoGame() {
   const [practiceScale, setPracticeScale] = useState<string | null>(null);
   const [keySignature, setKeySignature] = useState<KeySignature | null>(null);
   const [notePerformance, setNotePerformance] = useState<Record<string, NotePerformance>>({});
+  const [lifetimeBestStreak, setLifetimeBestStreak] = useState(0);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const feedbackId = useRef(0);
   const hydrated = useRef(false);
+  const statsHydrated = useRef(false);
   const noteStartedAt = useRef(nowMs());
 
   const stopListening = useCallback(() => {
@@ -130,7 +123,6 @@ export function usePianoGame() {
       setStreak(0);
       setBestStreak(0);
       setScore(0);
-      setNotePerformance({});
     }
     setMessage({
       text: nextPreferences.mode === "practice"
@@ -148,6 +140,9 @@ export function usePianoGame() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPreferences(saved);
     setRecords(loadRecords());
+    const savedStats = loadDetailedStats();
+    setNotePerformance(savedStats.notes);
+    setLifetimeBestStreak(savedStats.bestStreak);
     const content = contentFor(saved);
     setNotes(content.notes);
     setPracticeScale(content.scaleName);
@@ -160,6 +155,7 @@ export function usePianoGame() {
     });
     setTimeout(() => {
       hydrated.current = true;
+      statsHydrated.current = true;
     }, 0);
   }, [contentFor]);
 
@@ -168,6 +164,15 @@ export function usePianoGame() {
   useEffect(() => {
     if (hydrated.current) savePreferences(preferences);
   }, [preferences]);
+
+  useEffect(() => {
+    if (statsHydrated.current) {
+      saveDetailedStats({
+        notes: notePerformance,
+        bestStreak: lifetimeBestStreak,
+      });
+    }
+  }, [lifetimeBestStreak, notePerformance]);
 
   const updateRecord = useCallback((
     finalScore: number,
@@ -229,6 +234,7 @@ export function usePianoGame() {
       setNotePerformance((performance) => {
         const previous = performance[statKey] ?? {
           key: statKey,
+          midi: current.midi,
           letterIndex: current.letterIndex,
           accidental: current.accidental,
           naturalSign: Boolean(current.naturalSign),
@@ -251,6 +257,7 @@ export function usePianoGame() {
       const nextHits = hits + 1;
       const nextStreak = streak + 1;
       const nextBestStreak = Math.max(bestStreak, nextStreak);
+      setLifetimeBestStreak((value) => Math.max(value, nextStreak));
       const isLast = index === notes.length - 1;
       let nextScore = score + earned;
 
@@ -298,6 +305,7 @@ export function usePianoGame() {
       setNotePerformance((performance) => {
         const previous = performance[statKey] ?? {
           key: statKey,
+          midi: current.midi,
           letterIndex: current.letterIndex,
           accidental: current.accidental,
           naturalSign: Boolean(current.naturalSign),
@@ -343,6 +351,7 @@ export function usePianoGame() {
       setNotePerformance((performance) => {
         const previous = performance[statKey] ?? {
           key: statKey,
+          midi: current.midi,
           letterIndex: current.letterIndex,
           accidental: current.accidental,
           naturalSign: Boolean(current.naturalSign),
@@ -398,6 +407,12 @@ export function usePianoGame() {
 
   const retry = useCallback(() => resetSession(preferences), [preferences, resetSession]);
 
+  const resetDetailedStats = useCallback(() => {
+    setNotePerformance({});
+    setLifetimeBestStreak(0);
+    saveDetailedStats({ notes: {}, bestStreak: 0 });
+  }, []);
+
   const difficultyLabel = {
     easy: "Fácil",
     medium: "Médio",
@@ -439,6 +454,8 @@ export function usePianoGame() {
     hintMidi,
     keySignature,
     notePerformance: Object.values(notePerformance),
+    lifetimeBestStreak,
+    resetDetailedStats,
     title,
     clef,
     currentRecord,

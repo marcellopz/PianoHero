@@ -1,20 +1,17 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import type { NotePerformance } from "@/hooks/usePianoGame";
+import { useEffect, useMemo, useState } from "react";
+import type { NotePerformance } from "@/lib/game";
 import { noteName, type Notation } from "@/lib/music";
+import { MiniPianoStats } from "./MiniPianoStats";
 
 interface StatsModalProps {
   open: boolean;
   onClose: () => void;
-  score: number;
-  hits: number;
-  misses: number;
-  accuracy: number;
-  streak: number;
   bestStreak: number;
   notation: Notation;
   notes: NotePerformance[];
+  onReset: () => void;
 }
 
 function noteAccuracy(note: NotePerformance) {
@@ -34,19 +31,19 @@ function displayName(note: NotePerformance, notation: Notation) {
 export function StatsModal({
   open,
   onClose,
-  score,
-  hits,
-  misses,
-  accuracy,
-  streak,
   bestStreak,
   notation,
   notes,
+  onReset,
 }: StatsModalProps) {
+  const [resetArmed, setResetArmed] = useState(false);
   useEffect(() => {
     if (!open) return;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        setResetArmed(false);
+        onClose();
+      }
     };
     document.addEventListener("keydown", closeOnEscape);
     const previousOverflow = document.body.style.overflow;
@@ -58,7 +55,10 @@ export function StatsModal({
   }, [onClose, open]);
 
   const details = useMemo(() => {
+    const hits = notes.reduce((sum, note) => sum + note.hits, 0);
+    const misses = notes.reduce((sum, note) => sum + note.misses, 0);
     const attempts = hits + misses;
+    const accuracy = attempts ? Math.round((hits / attempts) * 100) : 100;
     const hints = notes.reduce((sum, note) => sum + note.hints, 0);
     const responseMs = notes.reduce((sum, note) => sum + note.totalResponseMs, 0);
     const sorted = [...notes].sort((a, b) =>
@@ -73,13 +73,16 @@ export function StatsModal({
     const needsPractice = sorted.find((note) => note.misses > 0);
     return {
       attempts,
+      hits,
+      misses,
+      accuracy,
       hints,
       averageResponse: hits ? responseMs / hits / 1000 : 0,
       sorted,
       mastered,
       needsPractice,
     };
-  }, [hits, misses, notes]);
+  }, [notes]);
 
   if (!open) return null;
 
@@ -87,7 +90,10 @@ export function StatsModal({
     <div
       className="modal-backdrop"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) {
+          setResetArmed(false);
+          onClose();
+        }
       }}
     >
       <section
@@ -101,18 +107,28 @@ export function StatsModal({
             <span className="sheet-kicker">DESEMPENHO DA SESSÃO</span>
             <h2 id="stats-modal-title">Estatísticas detalhadas</h2>
           </div>
-          <button className="modal-close" type="button" onClick={onClose} aria-label="Fechar estatísticas">
+          <button
+            className="modal-close"
+            type="button"
+            onClick={() => {
+              setResetArmed(false);
+              onClose();
+            }}
+            aria-label="Fechar estatísticas"
+          >
             ×
           </button>
         </header>
 
         <div className="summary-grid">
-          <div><span>Pontos</span><strong>{score.toLocaleString("pt-BR")}</strong></div>
-          <div><span>Precisão</span><strong>{accuracy}%</strong></div>
+          <div><span>Acertos</span><strong>{details.hits}</strong></div>
+          <div><span>Erros</span><strong>{details.misses}</strong></div>
+          <div><span>Precisão</span><strong>{details.accuracy}%</strong></div>
           <div><span>Tentativas</span><strong>{details.attempts}</strong></div>
           <div><span>Melhor sequência</span><strong>{bestStreak}</strong></div>
           <div><span>Tempo médio</span><strong>{details.averageResponse.toFixed(1)}s</strong></div>
           <div><span>Dicas usadas</span><strong>{details.hints}</strong></div>
+          <div><span>Notas praticadas</span><strong>{notes.length}</strong></div>
         </div>
 
         <div className="insight-grid">
@@ -139,45 +155,38 @@ export function StatsModal({
             </small>
           </article>
           <article>
-            <span>Sequência atual</span>
-            <strong>{streak}</strong>
-            <small>{hits} notas acertadas na sessão</small>
+            <span>Histórico acumulado</span>
+            <strong>{details.attempts}</strong>
+            <small>tentativas desde o último reset</small>
           </article>
         </div>
 
         <div className="note-stats-section">
-          <h3>Desempenho por nota</h3>
+          <h3>Mapa de desempenho por tecla</h3>
           {details.sorted.length === 0 ? (
             <p className="empty-stats">As estatísticas aparecerão depois da primeira tentativa.</p>
           ) : (
-            <div className="stats-table-scroll">
-              <table className="note-stats-table">
-                <thead>
-                  <tr>
-                    <th>Nota</th>
-                    <th>Acertos</th>
-                    <th>Erros</th>
-                    <th>Precisão</th>
-                    <th>Tempo médio</th>
-                    <th>Dicas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {details.sorted.map((note) => (
-                    <tr key={note.key}>
-                      <th>{displayName(note, notation)}</th>
-                      <td>{note.hits}</td>
-                      <td>{note.misses}</td>
-                      <td>{noteAccuracy(note)}%</td>
-                      <td>{note.hits ? `${(note.totalResponseMs / note.hits / 1000).toFixed(1)}s` : "—"}</td>
-                      <td>{note.hints}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <MiniPianoStats notes={notes} notation={notation} />
           )}
         </div>
+
+        <footer className="stats-modal-footer">
+          <p>Estas estatísticas são independentes da pontuação e ficam salvas neste dispositivo.</p>
+          <button
+            className={`reset-stats-button${resetArmed ? " is-armed" : ""}`}
+            type="button"
+            onClick={() => {
+              if (resetArmed) {
+                onReset();
+                setResetArmed(false);
+              } else {
+                setResetArmed(true);
+              }
+            }}
+          >
+            {resetArmed ? "Confirmar reset" : "Resetar estatísticas"}
+          </button>
+        </footer>
       </section>
     </div>
   );

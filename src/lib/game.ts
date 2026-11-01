@@ -21,6 +21,24 @@ export interface RecordEntry {
 
 export type Records = Record<string, RecordEntry>;
 
+export interface NotePerformance {
+  key: string;
+  midi: number;
+  letterIndex: number;
+  accidental: number;
+  naturalSign: boolean;
+  octave: number;
+  hits: number;
+  misses: number;
+  hints: number;
+  totalResponseMs: number;
+}
+
+export interface DetailedStats {
+  notes: Record<string, NotePerformance>;
+  bestStreak: number;
+}
+
 export const DEFAULT_PREFERENCES: Preferences = {
   mode: "songs",
   songId: "escala",
@@ -34,6 +52,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
 
 const PREFS_KEY = "piano-hero-preferences-v1";
 const RECORDS_KEY = "piano-hero-records-v1";
+const DETAILED_STATS_KEY = "piano-hero-detailed-stats-v1";
 
 function loadJson<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -64,6 +83,18 @@ export function loadRecords(): Records {
 export function saveRecords(records: Records) {
   try {
     window.localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+  } catch {
+    // The app remains usable when storage is unavailable.
+  }
+}
+
+export function loadDetailedStats(): DetailedStats {
+  return loadJson(DETAILED_STATS_KEY, { notes: {}, bestStreak: 0 });
+}
+
+export function saveDetailedStats(stats: DetailedStats) {
+  try {
+    window.localStorage.setItem(DETAILED_STATS_KEY, JSON.stringify(stats));
   } catch {
     // The app remains usable when storage is unavailable.
   }
