@@ -42,7 +42,7 @@ export interface KeyFeedback {
   id: number;
 }
 
-const initialNotes = parseSequence(SONG_BY_ID.escala.notes);
+const initialNotes = parseSequence(SONG_BY_ID["fur-elise"].notes);
 
 function performanceKey(note: Note) {
   return `${note.letterIndex}:${note.accidental}:${note.naturalSign ? 1 : 0}:${note.octave}`;
@@ -96,7 +96,7 @@ export function usePianoGame() {
     if (nextPreferences.mode === "practice") {
       return generatePracticeBatch(nextPreferences.clef, nextPreferences.difficulty, 16);
     }
-    const song = SONG_BY_ID[nextPreferences.songId] ?? SONG_BY_ID.escala;
+    const song = SONG_BY_ID[nextPreferences.songId] ?? SONG_BY_ID["fur-elise"];
     return { notes: parseSequence(song.notes), scaleName: null, keySignature: null };
   }, []);
 
@@ -135,7 +135,7 @@ export function usePianoGame() {
 
   useEffect(() => {
     const saved = loadPreferences();
-    if (!SONG_BY_ID[saved.songId]) saved.songId = "escala";
+    if (!SONG_BY_ID[saved.songId]) saved.songId = "fur-elise";
     // Hydration is the boundary where browser-only preferences enter the app.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPreferences(saved);
@@ -422,10 +422,10 @@ export function usePianoGame() {
     "hard-scales": "Difícil com escalas",
   }[preferences.difficulty];
   const title = preferences.mode === "songs"
-    ? (SONG_BY_ID[preferences.songId] ?? SONG_BY_ID.escala).title
+    ? (SONG_BY_ID[preferences.songId] ?? SONG_BY_ID["fur-elise"]).title
     : `Notas avulsas · ${difficultyLabel}${practiceScale ? ` · ${practiceScale}` : ""}`;
   const clef = preferences.mode === "songs"
-    ? (SONG_BY_ID[preferences.songId] ?? SONG_BY_ID.escala).clef
+    ? (SONG_BY_ID[preferences.songId] ?? SONG_BY_ID["fur-elise"]).clef
     : preferences.clef;
   const currentRecord = records[sessionKey(
     preferences.mode,

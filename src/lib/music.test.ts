@@ -7,6 +7,7 @@ import {
   noteName,
   parseNote,
   parseSequence,
+  PIANO_RANGE,
   type BaseDifficulty,
 } from "./music";
 import { accuracyPercent, completionBonus, scoreNote } from "./game";
@@ -48,9 +49,15 @@ describe("teoria musical", () => {
     expect(notes.some((note) => note.midi < 60)).toBe(true);
   });
 
-  it("oferece dez músicas monofônicas válidas", () => {
-    expect(SONGS).toHaveLength(10);
-    SONGS.forEach((song) => expect(() => parseSequence(song.notes)).not.toThrow());
+  it("oferece repertório monofônico intermediário e avançado válido", () => {
+    expect(SONGS).toHaveLength(13);
+    SONGS.forEach((song) => {
+      const notes = parseSequence(song.notes);
+      notes.forEach((note) => {
+        expect(note.midi).toBeGreaterThanOrEqual(PIANO_RANGE.low);
+        expect(note.midi).toBeLessThanOrEqual(PIANO_RANGE.high);
+      });
+    });
   });
 
   it.each(["easy-scales", "medium-scales", "hard-scales"] as const)(

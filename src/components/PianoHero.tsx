@@ -43,7 +43,7 @@ export function PianoHero() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [clef, press]);
 
-  const song = SONG_BY_ID[game.preferences.songId] ?? SONG_BY_ID.escala;
+  const song = SONG_BY_ID[game.preferences.songId] ?? SONG_BY_ID["fur-elise"];
   const ghostMidi = game.wrongMidi ?? (
     game.preferences.preview ? hoverMidi : null
   );
@@ -95,10 +95,14 @@ export function PianoHero() {
                 value={game.preferences.songId}
                 onChange={(event) => game.changePreferences({ songId: event.target.value })}
               >
-                {SONGS.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.title} · mão {item.hand.toLowerCase()}
-                  </option>
+                {(["Intermediária", "Avançada"] as const).map((level) => (
+                  <optgroup key={level} label={level}>
+                    {SONGS.filter((item) => item.level === level).map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.title} · {item.composer} · mão {item.hand.toLowerCase()}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </label>
@@ -151,7 +155,7 @@ export function PianoHero() {
           <div>
             <span className="sheet-kicker">
               {game.preferences.mode === "songs"
-                ? `Mão ${song.hand.toLowerCase()} · ${game.clef === "treble" ? "clave de sol" : "clave de fá"}`
+                ? `${song.composer} · ${song.level} · mão ${song.hand.toLowerCase()} · ${game.clef === "treble" ? "clave de sol" : "clave de fá"}`
                 : `${game.clef === "treble" ? "Mão direita · clave de sol" : "Mão esquerda · clave de fá"}`}
             </span>
             <h2>{game.title}</h2>

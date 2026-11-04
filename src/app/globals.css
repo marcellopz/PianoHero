@@ -503,7 +503,7 @@ h1 span {
 .piano-keys {
   position: relative;
   display: flex;
-  min-width: calc(22 * 38px);
+  min-width: calc(25 * 38px);
   height: clamp(155px, 21vw, 202px);
   touch-action: pan-x;
 }

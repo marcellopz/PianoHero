@@ -23,6 +23,8 @@ export interface Note {
 export interface Song {
   id: string;
   title: string;
+  composer: string;
+  level: "Intermediária" | "Avançada";
   clef: Clef;
   hand: "Direita" | "Esquerda";
   notes: string;
@@ -57,7 +59,7 @@ const FLAT_SPELLING: ReadonlyArray<readonly [number, -1 | 0]> = [
   [4, -1], [4, 0], [5, -1], [5, 0], [6, -1], [6, 0],
 ];
 
-export const PIANO_RANGE = { low: 48, high: 84 };
+export const PIANO_RANGE = { low: 43, high: 84 };
 export const CLEF_RANGES: Record<Clef, readonly [number, number]> = {
   // Fá3 a Si5: inclui notas abaixo do Dó central na clave de sol.
   treble: [24, 41],

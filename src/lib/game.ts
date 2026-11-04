@@ -41,7 +41,7 @@ export interface DetailedStats {
 
 export const DEFAULT_PREFERENCES: Preferences = {
   mode: "songs",
-  songId: "escala",
+  songId: "fur-elise",
   clef: "treble",
   difficulty: "easy",
   notation: "pt",
